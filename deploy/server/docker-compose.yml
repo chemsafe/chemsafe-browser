@@ -1,0 +1,31 @@
+services:
+  browseros:
+    build: .
+    container_name: browseros
+    hostname: browseros-host   # stable hostname so Chromium's profile-lock check
+                                # matches across container restarts
+    shm_size: "2gb"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./profile:/config
+    ports:
+      # All ports bound to 127.0.0.1 on the host: only this machine can reach them.
+      # When you later host this for team access, do NOT switch these to 0.0.0.0 —
+      # instead put a reverse proxy (Caddy/Traefik) with auth in front of port 33000,
+      # and keep 9200 internal (reach it via SSH tunnel or a sidecar container in
+      # the same network).
+      #
+      # NOTE on host ports: Windows / Hyper-V dynamically reserves common low ports
+      # (3000, 5000, etc.). Using high ports (33000+) sidesteps that. The container-
+      # side ports stay at the values BrowserOS / KasmVNC bind to internally.
+      - "127.0.0.1:33000:3000"   # KasmVNC web UI (humans open http://localhost:33000)
+      - "127.0.0.1:39200:9200"   # BrowserOS HTTP MCP server (external agents)
+      #
+      # Ports intentionally NOT exposed:
+      #   - 9100 (Chromium CDP): unauthenticated — exposing it = full RCE in the browser.
+      #     Reach from host with: docker exec browseros curl http://127.0.0.1:9100/json/version
+      #   - 9300 (Controller WebSocket): for the bundled extension only, not external clients.
+    restart: unless-stopped

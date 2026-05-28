@@ -1,0 +1,38 @@
+#!/bin/bash
+# Locate the BrowserOS binary. Different release versions install to different paths,
+# so try the common spots in order.
+if command -v browseros >/dev/null 2>&1; then
+  BIN=$(command -v browseros)
+elif [ -x /opt/browseros/browseros ]; then
+  BIN=/opt/browseros/browseros
+elif [ -x /usr/lib/browseros/browseros ]; then
+  BIN=/usr/lib/browseros/browseros
+else
+  BIN=$(dpkg -L browseros 2>/dev/null | grep -E '/(bin|opt|lib)/.*/browseros$' | head -1)
+fi
+
+if [ -z "$BIN" ] || [ ! -x "$BIN" ]; then
+  echo "FATAL: BrowserOS binary not found. Run 'dpkg -L browseros' inside the container."
+  exit 1
+fi
+
+echo "Launching BrowserOS from: $BIN"
+
+mkdir -p /config/profile
+
+# IMPORTANT: do NOT pass --remote-debugging-port here. BrowserOS manages its
+# own CDP/MCP-proxy arrangement on port 9000 internally and sets up an MCP
+# server on 9100. Passing --remote-debugging-port=9000 collides with the
+# BrowserOS MCP proxy and breaks the AI agent + external MCP clients.
+# BrowserOS will expose CDP/MCP on the same 9000/9100 ports automatically.
+#
+# --no-sandbox is required because we're running Chromium in an unprivileged
+# container as a non-root user without SYS_ADMIN cap. For a multi-user server
+# deployment, switch to --cap-add=SYS_ADMIN + a tight seccomp profile so the
+# sandbox can re-enable.
+exec "$BIN" \
+  --no-sandbox \
+  --disable-dev-shm-usage \
+  --user-data-dir=/config/profile \
+  --no-first-run \
+  --no-default-browser-check
