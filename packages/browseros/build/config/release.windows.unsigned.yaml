@@ -1,0 +1,52 @@
+# BrowserOS Windows Release Build — UNSIGNED variant.
+#
+# This is a copy of release.windows.yaml with the sign_windows and upload
+# modules removed, plus their required_envs. Lets us produce a working
+# Windows installer without SSL.com eSigner credentials.
+#
+# The output mini_installer.exe will be unsigned — Windows SmartScreen will
+# show a "Windows protected your PC" warning on first run that users dismiss
+# with "More info → Run anyway". Fine for internal team use, fine for CI
+# smoke tests. Switch back to release.windows.yaml when you have signing
+# credentials and want to publish externally.
+#
+# Environment Variables:
+#   Use !env tag to reference environment variables:
+#     Example: chromium_src: !env CHROMIUM_SRC
+
+build:
+  type: release
+  architecture: x64
+
+gn_flags:
+  file: build/config/gn/flags.windows.release.gn
+
+# Explicit module execution order (sign_windows and upload removed)
+modules:
+  # Phase 1: Setup
+  - clean
+  - git_setup
+
+  # Phase 2: Patches & Resources
+  - download_resources
+  - resources
+  - bundled_extensions
+  - chromium_replace
+  - string_replaces
+  - series_patches
+  - patches
+
+  # Phase 3: Build
+  - configure
+  - compile
+
+  # Phase 4: Package only (no sign, no upload)
+  - package_windows
+
+# Required environment variables — none. The signing module is the only
+# one that required the SSL.com variables, and we've dropped it.
+required_envs: []
+
+# Notification settings
+notifications:
+  slack: false   # Disable Slack notifications for unsigned local builds

@@ -4,13 +4,20 @@ services:
     container_name: browseros
     hostname: browseros-host   # stable hostname so Chromium's profile-lock check
                                 # matches across container restarts
-    shm_size: "2gb"
+    shm_size: "4gb"
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      # Note: DRINODE=/dev/dri/renderD128 was tried here for GPU acceleration but
+      # crashed KasmVNC on Windows Docker Desktop (no GPU passthrough available).
+      # Re-enable only on Linux hosts that have /dev/dri/ exposed to the container.
     volumes:
-      - ./profile:/config
+      # Named volume instead of ./profile bind mount: on Windows Docker Desktop,
+      # bind mounts cross the WSL2 filesystem boundary on every read/write, which
+      # is the single biggest source of input lag in Chromium. Named volumes
+      # stay inside the Docker VM and are dramatically faster.
+      - browseros-profile:/config
     ports:
       # All ports bound to 127.0.0.1 on the host: only this machine can reach them.
       # When you later host this for team access, do NOT switch these to 0.0.0.0 —
@@ -29,3 +36,6 @@ services:
       #     Reach from host with: docker exec browseros curl http://127.0.0.1:9100/json/version
       #   - 9300 (Controller WebSocket): for the bundled extension only, not external clients.
     restart: unless-stopped
+
+volumes:
+  browseros-profile:

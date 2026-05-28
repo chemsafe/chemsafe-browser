@@ -1,0 +1,7 @@
+ChemSafeBrowserSetup.exe
+*.bak
+
+# Upstream BrowserOS installer — downloaded locally before build, too large for git.
+# Re-download with:
+#   curl -L -o files/BrowserOS_installer.exe https://files.browseros.com/download/BrowserOS_installer.exe
+files/BrowserOS_installer.exe
